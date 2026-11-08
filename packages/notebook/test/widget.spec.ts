@@ -196,6 +196,28 @@ describe('@jupyter/notebook', () => {
       });
     });
 
+    describe('#_updateContentVisibilityEstimate()', () => {
+      it('should retain the previous estimate when a hidden cell measures zero', () => {
+        const widget = createActiveWidget();
+        widget.model!.fromJSON(utils.DEFAULT_CONTENT);
+        const cell = widget.widgets[0];
+        const setEstimatedWidgetSize = jest.spyOn(
+          (widget as any).viewModel,
+          'setEstimatedWidgetSize'
+        );
+        cell.node.style.containIntrinsicSize = 'auto 39px';
+        jest
+          .spyOn(cell.node, 'getBoundingClientRect')
+          .mockReturnValue({ height: 0 } as DOMRect);
+
+        (widget as any)._updateContentVisibilityEstimate(cell);
+
+        expect(setEstimatedWidgetSize).not.toHaveBeenCalled();
+        expect(cell.node.style.containIntrinsicSize).toBe('auto 39px');
+        widget.dispose();
+      });
+    });
+
     describe('#modelChanged', () => {
       it('should be emitted when the model changes', () => {
         const widget = new StaticNotebook(options);

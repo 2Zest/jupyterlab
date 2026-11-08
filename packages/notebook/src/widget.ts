@@ -1066,10 +1066,7 @@ export class StaticNotebook extends WindowedList<NotebookViewModel> {
           } else if (
             this.notebookConfig.windowingMode === 'contentVisibility'
           ) {
-            // Update height estimate in the view model
-            const height = cell.node.getBoundingClientRect().height;
-            this.viewModel.setEstimatedWidgetSize(cell.model.id, height);
-            cell.node.style.containIntrinsicSize = `auto ${height}px`;
+            this._updateContentVisibilityEstimate(cell);
           }
         }
       }
@@ -1104,6 +1101,23 @@ export class StaticNotebook extends WindowedList<NotebookViewModel> {
     cell.dataset.windowedListIndex = `${cellIdx}`;
     this.layout.insertWidget(cellIdx, cell);
     await cell.ready;
+  }
+
+  /**
+   * Update the intrinsic size estimate after rendering a content-visibility cell.
+   *
+   * A cell restored in a background tab can still be skipped by
+   * `content-visibility` when it is measured here. Browsers report a zero
+   * bounding-box height in that case; retaining the previous estimate prevents
+   * a transient zero-height layout from corrupting cell-id navigation on the
+   * first activation.
+   */
+  private _updateContentVisibilityEstimate(cell: Cell): void {
+    const height = cell.node.getBoundingClientRect().height;
+    if (height > 0) {
+      this.viewModel.setEstimatedWidgetSize(cell.model.id, height);
+      cell.node.style.containIntrinsicSize = `auto ${height}px`;
+    }
   }
 
   /**
@@ -2366,8 +2380,7 @@ export class Notebook extends StaticNotebook {
    * selection.
    */
   getContiguousSelection():
-    | { head: number; anchor: number }
-    | { head: null; anchor: null } {
+    { head: number; anchor: number } | { head: null; anchor: null } {
     const cells = this.widgets;
     const first = ArrayExt.findFirstIndex(cells, c => this.isSelected(c));
 
